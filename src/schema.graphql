@@ -1,0 +1,201 @@
+# Custom Queries
+type Query {
+  name_search(searchText: String!): [JSON] @cypher(statement:
+  """
+  CALL db.index.fulltext.queryNodes('name_search', $searchText) YIELD node, score
+  WITH node, score
+  MATCH (node)-[:DESCRIBES]->(t:taxon)
+  RETURN node {
+    .*,
+    taxon: t,
+    score: score
+  }
+  ORDER BY node.score DESC
+  LIMIT 25
+  """)
+}
+
+# Custom scalars
+scalar JSON
+
+# Interfaces
+interface taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+interface Fact {
+  uuid: ID!
+  text: String!
+  source: String!
+  target: taxon! @relation(name: "COMMENTS_ON", direction: "OUT")
+  creator: User! @relation(name: "CREATED", direction: "IN")
+}
+interface User {
+  uuid: ID!
+  username: String!
+  facts: Fact! @relation(name: "CREATED", direction: "OUT")
+}
+
+# taxonomy types
+type class implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  orders: [order!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(o:order) RETURN o")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type family implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  class: class @cypher(statement: "MATCH (this),(c:class), (this)-[:MEMBER_OF*]->(c) RETURN c")
+  order: order @cypher(statement: "MATCH (this),(o:order), (this)-[:MEMBER_OF*]->(o) RETURN o")
+  genera: [genus!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(g:genus) RETURN g")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type genus implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  class: class @cypher(statement: "MATCH (this),(c:class), (this)-[:MEMBER_OF*]->(c) RETURN c")
+  order: order @cypher(statement: "MATCH (this),(o:order), (this)-[:MEMBER_OF*]->(o) RETURN o")
+  family: family @cypher(statement: "MATCH (this),(f:family), (this)-[:MEMBER_OF*]->(f) RETURN f")
+  species: [species!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(s:species) RETURN s")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type kingdom implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  phyla: [phylum!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(p:phylum) RETURN p")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type order implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  class: class @cypher(statement: "MATCH (this),(c:class), (this)-[:MEMBER_OF*]->(c) RETURN c")
+  families: [family!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(f:family) RETURN f")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type phylum implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  classes: [class!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(c:class) RETURN c")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type species implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  class: class @cypher(statement: "MATCH (this),(c:class), (this)-[:MEMBER_OF*]->(c) RETURN c")
+  order: order @cypher(statement: "MATCH (this),(o:order), (this)-[:MEMBER_OF*]->(o) RETURN o")
+  family: family @cypher(statement: "MATCH (this),(f:family), (this)-[:MEMBER_OF*]->(f) RETURN f")
+  genus: genus @cypher(statement: "MATCH (this),(g:genus), (this)-[:MEMBER_OF*]->(g) RETURN g")
+  subspecies: [subspecies!] @cypher(statement: "MATCH (this)<-[:MEMBER_OF*1..10]-(s:subspecies) RETURN s")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+type subspecies implements taxon {
+  tax_id: ID!
+  names: [name!] @relation(name: "DESCRIBES", direction: "IN")
+  hierarchy: JSON @cypher(statement:
+  """
+  MATCH (this),(k:kingdom), p=(this)-[:MEMBER_OF*]->(k)
+  WITH COLLECT(p) as hierarchy
+  CALL apoc.convert.toTree(hierarchy) YIELD value
+  RETURN value
+  """)
+  kingdom: kingdom @cypher(statement: "MATCH (this),(k:kingdom), (this)-[:MEMBER_OF*]->(k) RETURN k")
+  phylum: phylum @cypher(statement: "MATCH (this),(p:phylum), (this)-[:MEMBER_OF*]->(p) RETURN p")
+  class: class @cypher(statement: "MATCH (this),(c:class), (this)-[:MEMBER_OF*]->(c) RETURN c")
+  order: order @cypher(statement: "MATCH (this),(o:order), (this)-[:MEMBER_OF*]->(o) RETURN o")
+  family: family @cypher(statement: "MATCH (this),(f:family), (this)-[:MEMBER_OF*]->(f) RETURN f")
+  genus: genus @cypher(statement: "MATCH (this),(g:genus), (this)-[:MEMBER_OF*]->(g) RETURN g")
+  species: species @cypher(statement: "MATCH (this),(s:species), (this)-[:MEMBER_OF*]->(s) RETURN s")
+  pending_facts: [pending_fact!] @relation(name: "COMMENTS_ON", direction: "IN")
+}
+
+# Facts
+type pending_fact implements Fact {
+  uuid: ID!
+  text: String!
+  source: String!
+  target: taxon! @relation(name: "COMMENTS_ON", direction: "OUT")
+  creator: User! @relation(name: "CREATED", direction: "IN")
+}
+
+# Metastuff
+type name {
+  uuid: ID!
+  name: String
+  unique_name: String
+  class: String
+}
+
+type admin_user implements User {
+  uuid: ID!
+  username: String!
+  facts: Fact! @relation(name: "CREATED", direction: "OUT")
+}
